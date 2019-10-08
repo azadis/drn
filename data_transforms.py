@@ -65,6 +65,25 @@ class RandomScale(object):
         return image.resize((tw, th), interpolation), \
                label.resize((tw, th), Image.NEAREST)
 
+class Scale(object):
+    def __init__(self, new_size):
+        self.w_ = new_size
+
+    def __call__(self, image, label):
+        
+        w, h = image.size
+        ratio = self.w_/w
+        tw = int(ratio * w)
+        th = int(ratio * h)
+        if ratio == 1:
+            return image, label
+        elif ratio < 1:
+            interpolation = Image.ANTIALIAS
+        else:
+            interpolation = Image.CUBIC
+        return image.resize((tw, th), interpolation), \
+               label.resize((tw, th), Image.NEAREST)
+
 
 class RandomRotate(object):
     """Crops the given PIL.Image at a random location to have a region of

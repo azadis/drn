@@ -172,6 +172,8 @@ class SegListMS(torch.utils.data.Dataset):
     def __getitem__(self, index):
         data = [Image.open(join(self.data_dir, self.image_list[index]))]
         w, h = data[0].size
+        print(w,h)
+        aaaa
         if self.label_list is not None:
             data.append(Image.open(
                 join(self.data_dir, self.label_list[index])))
@@ -362,6 +364,9 @@ def train_seg(args):
         t.append(transforms.RandomRotate(args.random_rotate))
     if args.random_scale > 0:
         t.append(transforms.RandomScale(args.random_scale))
+
+    if args.load_size > 0:
+        t.append(transforms.Scale(args.load_size))
     t.extend([transforms.RandomCrop(crop_size),
               transforms.RandomHorizontalFlip(),
               transforms.ToTensor(),
@@ -499,6 +504,7 @@ def test(eval_data_loader, model, num_classes,
     end = time.time()
     hist = np.zeros((num_classes, num_classes))
     for iter, (image, label, name) in enumerate(eval_data_loader):
+        print(image.size(), label.size())
         data_time.update(time.time() - end)
         image_var = Variable(image, requires_grad=False, volatile=True)
         final = model(image_var)[0]
@@ -631,16 +637,17 @@ def test_seg(args):
     info = json.load(open(join(data_dir, 'info.json'), 'r'))
     normalize = transforms.Normalize(mean=info['mean'], std=info['std'])
     scales = [0.5, 0.75, 1.25, 1.5, 1.75]
+    t=[]
+    if args.load_size > 0:
+        t.append(transforms.Scale(args.load_size))
+    t.extend([transforms.ToTensor(),
+              normalize])
+    t = transforms.Compose(t)
+
     if args.ms:
-        dataset = SegListMS(data_dir, phase, transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ]), scales, list_dir=args.list_dir)
+        dataset = SegListMS(data_dir, phase, t, scales, list_dir=args.list_dir)
     else:
-        dataset = SegList(data_dir, phase, transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ]), list_dir=args.list_dir, out_name=True)
+        dataset = SegList(data_dir, phase, t, list_dir=args.list_dir, out_name=True)
     test_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size, shuffle=False, num_workers=num_workers,
@@ -663,7 +670,9 @@ def test_seg(args):
         else:
             logger.info("=> no checkpoint found at '{}'".format(args.resume))
 
-    out_dir = '{}_{:03d}_{}'.format(args.arch, start_epoch, phase)
+    out_dir = '{}/{}_{:03d}_{}'.format(args.output, args.arch, start_epoch, phase)
+    if not os.path.exits(out_dir):
+        os.makedirs(out_dir)
     if len(args.test_suffix) > 0:
         out_dir += '_' + args.test_suffix
     if args.ms:
@@ -710,6 +719,8 @@ def parse_args():
                         help='path to latest checkpoint (default: none)')
     parser.add_argument('--ckpt', default='', type=str, metavar='PATH',
                         help='path to save the checkpoint (default: none)')
+    parser.add_argument('--output', default='output', type=str, metavar='PATH',
+                        help='path to save the visualizations (default: none)')
     parser.add_argument('--pretrained', dest='pretrained',
                         default='', type=str, metavar='PATH',
                         help='use pre-trained model')
@@ -718,6 +729,7 @@ def parse_args():
     parser.add_argument('--phase', default='val')
     parser.add_argument('--random-scale', default=0, type=float)
     parser.add_argument('--random-rotate', default=0, type=int)
+    parser.add_argument('--load_size', default=0, type=int)
     parser.add_argument('--bn-sync', action='store_true')
     parser.add_argument('--ms', action='store_true',
                         help='Turn on multi-scale testing')
