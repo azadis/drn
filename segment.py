@@ -211,7 +211,7 @@ def validate(val_loader, model, criterion, eval_score=None, print_freq=10):
                                torch.nn.modules.loss.MSELoss]:
             target = target.float()
         input = input.cuda()
-        target = target.cuda(async=True)
+        target = target.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
 
@@ -221,7 +221,7 @@ def validate(val_loader, model, criterion, eval_score=None, print_freq=10):
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data, input.size(0))
         if eval_score is not None:
             score.update(eval_score(output, target_var), input.size(0))
 
@@ -270,7 +270,7 @@ def accuracy(output, target):
     correct = correct[target != 255]
     correct = correct.view(-1)
     score = correct.float().sum(0).mul(100.0 / correct.size(0))
-    return score.data[0]
+    return score.data
 
 
 def train(train_loader, model, criterion, optimizer, epoch,
@@ -294,7 +294,7 @@ def train(train_loader, model, criterion, optimizer, epoch,
             target = target.float()
 
         input = input.cuda()
-        target = target.cuda(async=True)
+        target = target.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
 
@@ -304,7 +304,7 @@ def train(train_loader, model, criterion, optimizer, epoch,
 
         # measure accuracy and record loss
         # prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data, input.size(0))
         if eval_score is not None:
             scores.update(eval_score(output, target_var), input.size(0))
 
@@ -421,7 +421,10 @@ def train_seg(args):
 
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
-        checkpoint_path = 'checkpoint_latest.pth.tar'
+        checkpoint_dir= '%s/%s'%(args.ckpt, args.arch)
+        if not os.path.exists(checkpoint_dir):
+            os.mkdir(checkpoint_dir)
+        checkpoint_path = '%s/checkpoint_latest.pth.tar'%(checkpoint_dir)
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
@@ -705,6 +708,8 @@ def parse_args():
                         help='evaluate model on validation set')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
+    parser.add_argument('--ckpt', default='', type=str, metavar='PATH',
+                        help='path to save the checkpoint (default: none)')
     parser.add_argument('--pretrained', dest='pretrained',
                         default='', type=str, metavar='PATH',
                         help='use pre-trained model')
