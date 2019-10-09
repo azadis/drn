@@ -151,14 +151,12 @@ class SegList(torch.utils.data.Dataset):
     def read_lists(self):
 
         image_path = join(self.list_dir, self.name + self.phase + '_images.txt')
-        print(image_path)
         label_path = join(self.list_dir, self.name + self.phase + '_labels.txt')
         assert exists(image_path)
         self.image_list = [line.strip() for line in open(image_path, 'r')]
         if exists(label_path):
             self.label_list = [line.strip() for line in open(label_path, 'r')]
             assert len(self.image_list) == len(self.label_list)
-
 
 class SegListMS(torch.utils.data.Dataset):
     def __init__(self, data_dir, phase, transforms, scales, list_dir=None):
@@ -175,8 +173,6 @@ class SegListMS(torch.utils.data.Dataset):
     def __getitem__(self, index):
         data = [Image.open(join(self.data_dir, self.image_list[index]))]
         w, h = data[0].size
-        print(w,h)
-        aaaa
         if self.label_list is not None:
             data.append(Image.open(
                 join(self.data_dir, self.label_list[index])))
