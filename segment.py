@@ -121,11 +121,12 @@ class DRNSeg(nn.Module):
 
 class SegList(torch.utils.data.Dataset):
     def __init__(self, data_dir, phase, transforms, list_dir=None,
-                 out_name=False):
+                 out_name=False, name=''):
         self.list_dir = data_dir if list_dir is None else list_dir
         self.data_dir = data_dir
         self.out_name = out_name
         self.phase = phase
+        self.name = name
         self.transforms = transforms
         self.image_list = None
         self.label_list = None
@@ -148,8 +149,10 @@ class SegList(torch.utils.data.Dataset):
         return len(self.image_list)
 
     def read_lists(self):
-        image_path = join(self.list_dir, self.phase + '_images.txt')
-        label_path = join(self.list_dir, self.phase + '_labels.txt')
+
+        image_path = join(self.list_dir, self.name + self.phase + '_images.txt')
+        print(image_path)
+        label_path = join(self.list_dir, self.name + self.phase + '_labels.txt')
         assert exists(image_path)
         self.image_list = [line.strip() for line in open(image_path, 'r')]
         if exists(label_path):
@@ -373,7 +376,7 @@ def train_seg(args):
               normalize])
     train_loader = torch.utils.data.DataLoader(
         SegList(data_dir, 'train', transforms.Compose(t),
-                list_dir=args.list_dir),
+                list_dir=args.list_dir, name=args.name),
         batch_size=batch_size, shuffle=True, num_workers=num_workers,
         pin_memory=True, drop_last=True
     )
@@ -428,7 +431,7 @@ def train_seg(args):
         best_prec1 = max(prec1, best_prec1)
         checkpoint_dir= '%s/%s'%(args.ckpt, args.arch)
         if not os.path.exists(checkpoint_dir):
-            os.mkdir(checkpoint_dir)
+            os.makedirs(checkpoint_dir)
         checkpoint_path = '%s/checkpoint_latest.pth.tar'%(checkpoint_dir)
         save_checkpoint({
             'epoch': epoch + 1,
@@ -671,7 +674,7 @@ def test_seg(args):
             logger.info("=> no checkpoint found at '{}'".format(args.resume))
 
     out_dir = '{}/{}_{:03d}_{}'.format(args.output, args.arch, start_epoch, phase)
-    if not os.path.exits(out_dir):
+    if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     if len(args.test_suffix) > 0:
         out_dir += '_' + args.test_suffix
@@ -735,6 +738,7 @@ def parse_args():
                         help='Turn on multi-scale testing')
     parser.add_argument('--with-gt', action='store_true')
     parser.add_argument('--test-suffix', default='', type=str)
+    parser.add_argument('--name', default='', type=str ,help='name of the set')
     args = parser.parse_args()
 
     assert args.classes > 0
