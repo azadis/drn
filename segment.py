@@ -25,6 +25,7 @@ from torch.autograd import Variable
 
 import drn
 import data_transforms as transforms
+from torchvision.utils import make_grid, save_image
 
 try:
     from modules import batchnormsync
@@ -287,6 +288,9 @@ def train(train_loader, model, criterion, optimizer, epoch,
     end = time.time()
 
     for i, (input, target) in enumerate(train_loader):
+        # save_image(input[0,:,:,:], 'inp_%s.png'%i,
+        #                      nrow=1, normalize=True, range=(-1,1))
+
         # measure data loading time
         data_time.update(time.time() - end)
 
