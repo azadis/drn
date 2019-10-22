@@ -509,12 +509,14 @@ def test(eval_data_loader, model, num_classes,
     for iter, (image, label, name) in enumerate(eval_data_loader):
         print(image.size(), label.size())
         data_time.update(time.time() - end)
-        image_var = Variable(image, requires_grad=False, volatile=True)
-        final = model(image_var)[0]
+        with torch.no_grad():
+            image_var = Variable(image, requires_grad=False)
+            final = model(image_var)[0]
         _, pred = torch.max(final, 1)
         pred = pred.cpu().data.numpy()
         batch_time.update(time.time() - end)
         if save_vis:
+            print(name)
             save_output_images(pred, name, output_dir)
             save_colorful_images(
                 pred, name, output_dir + '_color',
@@ -650,7 +652,7 @@ def test_seg(args):
     if args.ms:
         dataset = SegListMS(data_dir, phase, t, scales, list_dir=args.list_dir)
     else:
-        dataset = SegList(data_dir, phase, t, list_dir=args.list_dir, out_name=True)
+        dataset = SegList(data_dir, phase, t, list_dir=args.list_dir, out_name=True, name=args.name)
     test_loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size, shuffle=False, num_workers=num_workers,
